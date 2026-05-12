@@ -95,9 +95,27 @@ proc find_cell_descendants_recursive {parent_cell parent_child_map} {
 }
 
 proc find_cell_descendants {parent_cell} {
+  set result_1 [find_cell_descendants1 $parent_cell]
+  set result_2 [find_cell_descendants2 $parent_cell]
+  if {[lsort $result_1] ne [lsort $result_2]} {
+    puts $result_1
+    puts $result_2
+    print_error "find_cell_descendants implementation not correct"
+  }
+  return $result_1
+}
+
+proc find_cell_descendants1 {parent_cell} {
   set all_cells [get_cells -hierarchical]
   set parent_child_map [build_parent_child_map $all_cells]
   return [find_cell_descendants_recursive $parent_cell $parent_child_map]
+}
+
+proc find_cell_descendants2 {parent_cell} {
+  current_instance $parent_cell
+  set descendants [get_cells -hierarchical]
+  current_instance
+  return $descendants
 }
 
 proc find_nested_cells {parent_cell name_match {should_exist 1}} {
@@ -120,7 +138,19 @@ proc find_nested_cells {parent_cell name_match {should_exist 1}} {
 
 proc find_cell_nets {cell name_match {should_exist 1}} {
   set matching_nets {}
-  foreach net [get_nets -hierarchical -filter "PARENT_CELL == $cell"] {
+  set nets [get_nets -hierarchical -filter "PARENT_CELL == $cell"]
+  current_instance $cell
+  set nets2 [get_nets -hierarchical -filter "PARENT_CELL == $cell"]
+  current_instance
+  # set nets2 [get_nets -of_objects $cell -filter "PARENT_CELL == $cell"]
+  if {[lsort $nets] ne [lsort $nets2]} {
+    puts $nets
+    puts $nets2
+    print_error "get_cell_net implementation not correct"
+  }
+
+
+  foreach net $nets {
     set name [get_property NAME $net]
     if {[regexp $name_match $name]} {
       lappend matching_nets $net
@@ -145,6 +175,16 @@ proc find_cell_net {cell name_match {should_exist 1}} {
 
 proc get_cell_net {cell name} {
   set net [get_nets -hierarchical -filter "PARENT_CELL == $cell && NAME == $name"]
+  current_instance $cell
+  set net2 [get_nets -hierarchical -filter "PARENT_CELL == $cell && NAME == $name"]
+  current_instance
+  # set net2 [get_nets -of_objects $cell -filter "PARENT_CELL == $cell && NAME == $name"]
+  if {[lsort $net] ne [lsort $net2]} {
+    puts $net
+    puts $net2
+    print_error "get_cell_net implementation not correct"
+  }
+   
   if {[llength $net] == 0} {
     puts "ERROR: No matching net found for '$cell' matching '$name'."
     exit -1
